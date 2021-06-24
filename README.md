@@ -1,1 +1,1 @@
-The source code of paper "Elastic Gradient Boosting Decision Tree with Adaptive Iterations for Concept Drift Adaptation".
+Source code for the paper "Elastic Gradient Boosting Decision Tree with Adaptive Iterations for Concept Drift Adaptation".
