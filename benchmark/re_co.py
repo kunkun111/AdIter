@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Sep 17 17:51:26 2020
+Created on Thu Sep 17 12:45:25 2020
 
 @author: kunwang
 """
@@ -16,24 +16,25 @@ from skmultiflow.meta import LeveragingBaggingClassifier
 from skmultiflow.meta import OnlineBoostingClassifier
 from skmultiflow.meta import OnlineRUSBoostClassifier
 from skmultiflow.meta import OzaBaggingClassifier
+from skmultiflow.meta import StreamingRandomPatchesClassifier
 from skmultiflow.evaluation import EvaluatePrequential
 import numpy as np
 import arff
 import pandas as pd
 from skmultiflow.data.data_stream import DataStream
-from sklearn.metrics import confusion_matrix, precision_score, accuracy_score, recall_score, f1_score, roc_auc_score, roc_curve
-
+from sklearn.metrics import confusion_matrix, precision_score, matthews_corrcoef, accuracy_score, recall_score, f1_score, roc_auc_score, roc_curve
 
 
 # load .arff dataset
-def load_arff(path, dataset_name, num_copy):
-    file_path = path + dataset_name + '/'+ dataset_name + str(num_copy) + '.arff'
+def load_arff(path, dataset_name):
+    file_path = path + dataset_name + '/'+ dataset_name + '.arff'
     dataset = arff.load(open(file_path), encode_nominal=True)
     return pd.DataFrame(dataset["data"])
 
 
-def ARF_run (dataset_name, batch):
-    data = load_arff(path, dataset_name, num_copy)
+def ARF_run (dataset_name, batch, seeds):
+    np.random.seed(seeds)
+    data = load_arff(path, dataset_name)
     # data = data.head(300)
     #print (data.shape)
     # data transform
@@ -46,14 +47,11 @@ def ARF_run (dataset_name, batch):
 
     # Train the classifier with the samples provided by the data stream
     pred = np.empty(0)
-    np.random.seed(0)
-    
     
     model = AdaptiveRandomForestClassifier()
     while n_samples < max_samples and stream.has_more_samples():
         X, y = stream.next_sample(batch)
         y_pred = model.predict(X)
-        
         pred = np.hstack((pred,y_pred))
         model.partial_fit(X, y,stream.target_values)
         n_samples += batch
@@ -63,21 +61,23 @@ def ARF_run (dataset_name, batch):
     Y = data[:,-1]
     acc = accuracy_score(Y[batch:], pred[batch:])
     f1 = f1_score(Y[batch:], pred[batch:], average='macro')
+    mcc = matthews_corrcoef(Y[batch:], pred[batch:])
     #print (Y[batch:].shape, pred[batch:].shape)
     print("acc:",acc)
     print("f1:",f1)
-    
+    print("mcc:",mcc)
     
     # save results
     result = np.zeros([pred[batch:].shape[0], 2])
     result[:, 0] = pred[batch:]
     result[:, 1] = Y[batch:]
-    np.savetxt(dataset_name + str(num_copy) + '_' + 'ARF.out', result, delimiter=',')
+    np.savetxt(dataset_name +'_'+str(seeds)+'ARF.out', result, delimiter=',')
     
     
     
-def NSE_run (dataset_name, batch):
-    data = load_arff(path, dataset_name, num_copy)
+def NSE_run (dataset_name, batch, seeds):
+    np.random.seed(seeds)
+    data = load_arff(path, dataset_name)
     # data = data.head(300)
     #print (data.shape)
     # data transform
@@ -90,7 +90,6 @@ def NSE_run (dataset_name, batch):
 
     # Train the classifier with the samples provided by the data stream
     pred = np.empty(0)
-    np.random.seed(0)
     
     model = LearnPPNSEClassifier()
     while n_samples < max_samples and stream.has_more_samples():
@@ -105,20 +104,23 @@ def NSE_run (dataset_name, batch):
     Y = data[:,-1]
     acc = accuracy_score(Y[batch:], pred[batch:])
     f1 = f1_score(Y[batch:], pred[batch:], average='macro')
+    mcc = matthews_corrcoef(Y[batch:], pred[batch:])
     #print (Y[batch:].shape, pred[batch:].shape)
     print("acc:",acc)
     print("f1:",f1)
+    print("mcc:",mcc)
     
     # save results
     result = np.zeros([pred[batch:].shape[0], 2])
     result[:, 0] = pred[batch:]
     result[:, 1] = Y[batch:]
-    np.savetxt(dataset_name + str(num_copy) + '_'+ 'NSE.out', result, delimiter=',')
+    np.savetxt(dataset_name +'_'+str(seeds)+ 'NSE.out', result, delimiter=',')
     
     
     
-def LEV_run (dataset_name, batch):
-    data = load_arff(path, dataset_name, num_copy)
+def LEV_run (dataset_name, batch, seeds):
+    np.random.seed(seeds)
+    data = load_arff(path, dataset_name)
     # data = data.head(300)
     #print (data.shape)
     # data transform
@@ -131,7 +133,6 @@ def LEV_run (dataset_name, batch):
 
     # Train the classifier with the samples provided by the data stream
     pred = np.empty(0)
-    np.random.seed(0)
     
     model = LeveragingBaggingClassifier()
     while n_samples < max_samples and stream.has_more_samples():
@@ -146,19 +147,22 @@ def LEV_run (dataset_name, batch):
     Y = data[:,-1]
     acc = accuracy_score(Y[batch:], pred[batch:])
     f1 = f1_score(Y[batch:], pred[batch:], average='macro')
+    mcc = matthews_corrcoef(Y[batch:], pred[batch:])
     #print (Y[batch:].shape, pred[batch:].shape)
     print("acc:",acc)
     print("f1:",f1)
+    print("mcc:",mcc)
     
     # save results
     result = np.zeros([pred[batch:].shape[0], 2])
     result[:, 0] = pred[batch:]
     result[:, 1] = Y[batch:]
-    np.savetxt(dataset_name + str(num_copy) + '_'+ 'LEV.out', result, delimiter=',')
+    np.savetxt(dataset_name +'_'+str(seeds)+ 'LEV.out', result, delimiter=',')
     
     
-def OBC_run (dataset_name, batch):
-    data = load_arff(path, dataset_name, num_copy)
+def OBC_run (dataset_name, batch, seeds):
+    np.random.seed(seeds)
+    data = load_arff(path, dataset_name)
     # data = data.head(300)
     #print (data.shape)
     # data transform
@@ -171,7 +175,6 @@ def OBC_run (dataset_name, batch):
 
     # Train the classifier with the samples provided by the data stream
     pred = np.empty(0)
-    np.random.seed(0)
     
     model1 = OnlineBoostingClassifier()
     while n_samples < max_samples and stream.has_more_samples():
@@ -186,19 +189,22 @@ def OBC_run (dataset_name, batch):
     Y = data[:,-1]
     acc = accuracy_score(Y[batch:], pred[batch:])
     f1 = f1_score(Y[batch:], pred[batch:], average='macro')
+    mcc = matthews_corrcoef(Y[batch:], pred[batch:])
     #print (Y[batch:].shape, pred[batch:].shape)
     print("acc:",acc)
     print("f1:",f1)
+    print("mcc:",mcc)
     
     # save results
     result = np.zeros([pred[batch:].shape[0], 2])
     result[:, 0] = pred[batch:]
     result[:, 1] = Y[batch:]
-    np.savetxt(dataset_name + str(num_copy) + '_'+ 'OBC.out', result, delimiter=',')
+    np.savetxt(dataset_name +'_'+str(seeds)+ 'OBC.out', result, delimiter=',')
     
 
-def RUS_run (dataset_name, batch):
-    data = load_arff(path, dataset_name, num_copy)
+def RUS_run (dataset_name, batch, seeds):
+    np.random.seed(seeds)
+    data = load_arff(path, dataset_name)
     # data = data.head(300)
     #print (data.shape)
     # data transform
@@ -211,7 +217,6 @@ def RUS_run (dataset_name, batch):
 
     # Train the classifier with the samples provided by the data stream
     pred = np.empty(0)
-    np.random.seed(0)
     
     model = OnlineRUSBoostClassifier()
     while n_samples < max_samples and stream.has_more_samples():
@@ -226,20 +231,23 @@ def RUS_run (dataset_name, batch):
     Y = data[:,-1]
     acc = accuracy_score(Y[batch:], pred[batch:])
     f1 = f1_score(Y[batch:], pred[batch:], average='macro')
+    mcc = matthews_corrcoef(Y[batch:], pred[batch:])
     #print (Y[batch:].shape, pred[batch:].shape)
     print("acc:",acc)
     print("f1:",f1)
+    print("mcc:",mcc)
     
     # save results
     result = np.zeros([pred[batch:].shape[0], 2])
     result[:, 0] = pred[batch:]
     result[:, 1] = Y[batch:]
-    np.savetxt(dataset_name + str(num_copy) + '_'+ 'RUS.out', result, delimiter=',')
+    np.savetxt(dataset_name +'_'+str(seeds)+ 'RUS.out', result, delimiter=',')
     
     
     
-def OZA_run (dataset_name, batch):
-    data = load_arff(path, dataset_name, num_copy)
+def OZA_run (dataset_name, batch, seeds):
+    np.random.seed(seeds)
+    data = load_arff(path, dataset_name)
     # data = data.head(300)
     #print (data.shape)
     # data transform
@@ -252,7 +260,6 @@ def OZA_run (dataset_name, batch):
 
     # Train the classifier with the samples provided by the data stream
     pred = np.empty(0)
-    np.random.seed(0)
     
     model = OzaBaggingClassifier()
     while n_samples < max_samples and stream.has_more_samples():
@@ -267,55 +274,116 @@ def OZA_run (dataset_name, batch):
     Y = data[:,-1]
     acc = accuracy_score(Y[batch:], pred[batch:])
     f1 = f1_score(Y[batch:], pred[batch:], average='macro')
+    mcc = matthews_corrcoef(Y[batch:], pred[batch:])
     #print (Y[batch:].shape, pred[batch:].shape)
     print("acc:",acc)
     print("f1:",f1)
+    print("mcc:",mcc)
     
     # save results
     result = np.zeros([pred[batch:].shape[0], 2])
     result[:, 0] = pred[batch:]
     result[:, 1] = Y[batch:]
-    np.savetxt(dataset_name + str(num_copy) + '_'+ 'OZA.out', result, delimiter=',')
+    np.savetxt(dataset_name +'_'+str(seeds)+ 'OZA.out', result, delimiter=',')
+    
+    
+    
+def SRP_run (dataset_name, batch, seeds):
+    np.random.seed(seeds)
+    data = load_arff(path, dataset_name)
+#    data = data.head(2000)
+    #print (data.shape)
+    # data transform
+    stream = DataStream(data)
+    #print(stream)
+
+    # Setup variables to control loop and track performance
+    n_samples = 0
+    max_samples = data.shape[0]
+
+    # Train the classifier with the samples provided by the data stream
+    pred = np.empty(0)
+    
+    model = StreamingRandomPatchesClassifier(n_estimators=10, subspace_mode='m', training_method='randomsubspaces', subspace_size=5)
+#    model = StreamingRandomPatchesClassifier()
+    while n_samples < max_samples and stream.has_more_samples():
+        X, y = stream.next_sample(batch)
+        y_pred = model.predict(X)
+        print (n_samples)
+        pred = np.hstack((pred,y_pred))
+        model.partial_fit(X, y,stream.target_values)
+        n_samples += batch
+
+    # evaluate
+    data = data.values
+    Y = data[:,-1]
+    acc = accuracy_score(Y[batch:], pred[batch:])
+    f1 = f1_score(Y[batch:], pred[batch:], average='macro')
+    mcc = matthews_corrcoef(Y[batch:], pred[batch:])
+    #print (Y[batch:].shape, pred[batch:].shape)
+    print("acc:",acc)
+    print("f1:",f1)
+    print("mcc:",mcc)
+    
+    # save results
+    result = np.zeros([pred[batch:].shape[0], 2])
+    result[:, 0] = pred[batch:]
+    result[:, 1] = Y[batch:]
+    np.savetxt(dataset_name +'_'+str(seeds)+ 'SRP0.out', result, delimiter=',')
 
     
     
     
 if __name__ == '__main__':
     
-    
-    # datasets = ['AGRa','HYP','RBF','RBFr','RTG','SEAa'] 
-    # datasets = ['AGRa','HYP'] 
-    # datasets = ['RBF','RBFr'] 
-    datasets = ['RTG','SEAa'] 
-    
-    path = '/Synthetic Data/'
-    batch_size = 100
-    num_run = 15
+    path = '/Realworld Data/'
 
-
+    datasets = ['usenet1']
+    batch = [40]
+    
+    # datasets = ['usenet2']
+    # batch = [40]
+    
+    # datasets = ['weather']
+    # batch = [365]
+    
+    # datasets = ['spam_corpus_x2_feature_selected']
+    # batch = [100]
+    
+    # datasets = ['elecNorm']
+    # batch = [100]
+    
+    # datasets = ['airline']
+    # batch = [100]
+    
     for i in range (len(datasets)):
         dataset_name = datasets[i]
-        for num_copy in range(num_run):
-            print(num_copy, '/', num_run)
-            print('dataset', dataset_name, num_copy, 'batch_size', batch_size)
+        batch_size = batch[i]
         
-            print (dataset_name, batch_size,'ARF')
-            ARF_run(dataset_name, batch_size)
-                  
-            print (dataset_name, batch_size,'NSE')
-            NSE_run(dataset_name, batch_size)
-            
-            print (dataset_name, batch_size,'LEV')
-            LEV_run(dataset_name, batch_size)
-                    
-            print (dataset_name, batch_size,'OBC')
-            OBC_run(dataset_name, batch_size)
-                     
-            print (dataset_name, batch_size,'RUS')
-            RUS_run(dataset_name, batch_size ) 
-            
-            print (dataset_name, batch_size,'OZA')
-            OZA_run(dataset_name, batch_size ) 
+        for j in range (0,30):
 
-    
-    
+
+            print (dataset_name, batch_size, j , 'ARF')
+            ARF_run(dataset_name, batch_size, j)
+                  
+            print (dataset_name, batch_size, j, 'NSE')
+            NSE_run(dataset_name, batch_size, j)
+            
+            print (dataset_name, batch_size, j, 'LEV')
+            LEV_run(dataset_name, batch_size, j)
+                    
+            print (dataset_name, batch_size, j, 'OBC')
+            OBC_run(dataset_name, batch_size, j)
+                     
+            print (dataset_name, batch_size, j, 'RUS')
+            RUS_run(dataset_name, batch_size, j) 
+            
+            print (dataset_name, batch_size, j, 'OZA')
+            OZA_run(dataset_name, batch_size, j) 
+            
+            print (dataset_name, batch_size, j, 'SRP')
+            SRP_run(dataset_name, batch_size, j) 
+
+  
+
+ 
